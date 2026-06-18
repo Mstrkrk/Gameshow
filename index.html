@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Faceoff — Buzz-In Game Board</title>
+<title>The Garden Showdown — Buzz-In Game Board</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -49,7 +49,7 @@
 
   /* ---- top bar ---- */
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;}
-  .brand{display:flex;align-items:baseline;gap:14px;}
+  .brand{display:flex;align-items:center;gap:14px;}
   .brand h1{
     font-family:var(--display);
     font-weight:700;
@@ -57,6 +57,13 @@
     text-transform:uppercase;
     font-size:clamp(18px,2vw,26px);
     margin:0;
+  }
+  .brand__logo{
+    height: clamp(30px, 3.2vw, 54px);
+    width: auto;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 0 8px rgba(0,0,0,.25));
   }
   .pill{
     font-size:11px;letter-spacing:.28em;text-transform:uppercase;
@@ -223,6 +230,9 @@
   @media (max-width:760px){
     .arena{grid-template-columns:1fr;grid-template-rows:auto auto auto;}
     .lane__score{font-size:64px;}
+    .brand{gap:10px;align-items:center;}
+    .brand__logo{height:32px;}
+    .brand h1{letter-spacing:.12em;font-size:clamp(15px,4.5vw,22px);}
   }
   @media (prefers-reduced-motion:reduce){
     *{animation:none !important;transition:none !important;}
@@ -262,7 +272,8 @@
 
     <div class="topbar">
       <div class="brand">
-        <h1>Faceoff</h1>
+        <img src="assets/bethel-church.png" alt="Bethel Church logo" class="brand__logo">
+        <h1>The Garden Showdown</h1>
         <span class="pill" id="pill" data-live="0">Buzzers off</span>
         <span class="pill" id="qcount" style="display:none;">Q 1 / 1</span>
       </div>
