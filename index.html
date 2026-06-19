@@ -6,6 +6,9 @@
 <title>The Garden Showdown — Buzz-In Game Board</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg-0:#f3f6fb;
@@ -24,6 +27,7 @@
     --hair:#c7d3e8;
     --display: "Arial Narrow", "Helvetica Neue Condensed", "Roboto Condensed", system-ui, sans-serif;
     --body: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+    --title: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   }
 
   *{box-sizing:border-box;}
@@ -47,28 +51,39 @@
     gap:clamp(12px,1.6vw,22px);
   }
 
-  /* ---- top bar ---- */
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;}
-  .brand{display:flex;align-items:center;gap:14px;}
-  .brand h1{
-    font-family:var(--display);
+  /* ---- masthead ---- */
+  .masthead{
+    position:relative;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    gap:clamp(6px,1.1vh,16px);
+    text-align:center;
+  }
+  .masthead__controls{position:absolute;top:0;right:0;display:flex;gap:10px;}
+  .masthead__logo{
+    height:clamp(56px,9.5vh,124px);width:auto;object-fit:contain;display:block;
+    filter:drop-shadow(0 10px 24px rgba(30,50,90,.26));
+  }
+  .masthead__title{
+    position:relative;
+    font-family:var(--title);
     font-weight:700;
-    letter-spacing:.22em;
-    text-transform:uppercase;
-    font-size:clamp(18px,2vw,26px);
+    letter-spacing:-.015em;
+    line-height:.92;
+    font-size:clamp(30px,5.6vw,80px);
     margin:0;
+    color:var(--ink);
   }
-  .brand__logo{
-    height: clamp(30px, 3.2vw, 54px);
-    width: auto;
-    object-fit: contain;
-    display: block;
-    filter: drop-shadow(0 0 8px rgba(0,0,0,.25));
+  .masthead__title::after{
+    content:"";display:block;width:clamp(56px,7vw,96px);height:4px;
+    margin:clamp(8px,1.2vh,14px) auto 0;border-radius:999px;
+    background:linear-gradient(90deg,var(--left),var(--right));
   }
+  .masthead__status{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;}
   .pill{
-    font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+    font-family:var(--title);
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;
     color:var(--muted);border:1px solid var(--hair);border-radius:999px;
-    padding:6px 14px;white-space:nowrap;transition:.25s;
+    padding:6px 14px;white-space:nowrap;transition:.25s;background:rgba(255,255,255,.6);
   }
   .pill[data-live="1"]{color:#031;background:var(--right);border-color:var(--right);box-shadow:0 0 24px rgba(39,211,239,.5);}
   .gear{
@@ -90,8 +105,9 @@
   .lane{
     position:relative;
     border-radius:24px;
-    background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.25));
+    background:linear-gradient(180deg,#ffffff,#eef3fb);
     border:1px solid var(--hair);
+    box-shadow:0 22px 45px -30px rgba(28,46,86,.6);
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:clamp(16px,2vw,30px);
     overflow:hidden;
@@ -230,9 +246,8 @@
   @media (max-width:760px){
     .arena{grid-template-columns:1fr;grid-template-rows:auto auto auto;}
     .lane__score{font-size:64px;}
-    .brand{gap:10px;align-items:center;}
-    .brand__logo{height:32px;}
-    .brand h1{letter-spacing:.12em;font-size:clamp(15px,4.5vw,22px);}
+    .masthead__logo{height:clamp(42px,9vh,72px);}
+    .masthead__title{font-size:clamp(24px,7.5vw,38px);}
   }
   @media (prefers-reduced-motion:reduce){
     *{animation:none !important;transition:none !important;}
@@ -270,18 +285,18 @@
 <body>
   <div class="stage" id="stage" data-state="idle" data-buzz="0">
 
-    <div class="topbar">
-      <div class="brand">
-        <img src="assets/bethel-church.png" alt="Bethel Church logo" class="brand__logo">
-        <h1>The Garden Showdown</h1>
-        <span class="pill" id="pill" data-live="0">Buzzers off</span>
-        <span class="pill" id="qcount" style="display:none;">Q 1 / 1</span>
-      </div>
-      <div style="display:flex;gap:10px;">
+    <header class="masthead">
+      <div class="masthead__controls">
         <button class="gear" id="phonesBtn" aria-label="Connect phones" title="Connect phones (C)" style="font-size:17px;">&#128241;</button>
         <button class="gear" id="gearBtn" aria-label="Settings">&#9881;</button>
       </div>
-    </div>
+      <img src="assets/bethel-church.png" alt="Bethel Church" class="masthead__logo">
+      <h1 class="masthead__title">The Garden Showdown</h1>
+      <div class="masthead__status">
+        <span class="pill" id="pill" data-live="0">Buzzers off</span>
+        <span class="pill" id="qcount" style="display:none;">Q 1 / 1</span>
+      </div>
+    </header>
 
     <div class="arena">
       <!-- LEFT contestant -->
@@ -297,7 +312,7 @@
 
       <!-- CENTER -->
       <div class="center">
-        <div class="question is-empty" id="question">Type a question in settings, or just read it aloud. Press Space to arm the buzzers.</div>
+        <div class="question is-empty" id="question"></div>
         <div class="banner" id="banner">Get ready</div>
         <div class="worth" id="worth">Correct <b>+100</b> &nbsp;·&nbsp; Wrong <s>&minus;50</s></div>
       </div>
@@ -315,12 +330,12 @@
     </div>
 
     <div class="hints">
-      <span><kbd>Space</kbd>Arm</span>
+      <span><kbd>N</kbd>Next question + arm</span>
       <span><kbd>1</kbd><kbd>2</kbd>Buzz in (or &larr; &rarr;)</span>
       <span><kbd>R</kbd>Correct</span>
       <span><kbd>W</kbd>Wrong</span>
-      <span><kbd>N</kbd><kbd>P</kbd>Next / prev question</span>
-      <span><kbd>Esc</kbd>Reset round</span>
+      <span><kbd>Space</kbd>Re-arm (steal)</span>
+      <span><kbd>P</kbd>Previous &nbsp;·&nbsp; <kbd>Esc</kbd>Reset</span>
     </div>
   </div>
 
@@ -369,12 +384,12 @@ Leave blank to just read aloud"></textarea>
     <p class="note">
       <b>How to run it</b><br>
       Put one question per line. Add <kbd>| 200</kbd> at the end of a line to override that
-      question's points; otherwise it uses the default. Step through with <kbd>N</kbd> (next) and
-      <kbd>P</kbd> (previous).<br><br>
-      Read the question, press <kbd>Space</kbd> to go live. First contestant to hit
-      <kbd>1</kbd> or <kbd>2</kbd> locks the other out. Judge with <kbd>R</kbd> (adds the full value)
-      or <kbd>W</kbd> (subtracts half). <kbd>Space</kbd> re-arms the same question for a steal;
-      <kbd>N</kbd> moves on.<br><br>
+      question's points; otherwise it uses the default.<br><br>
+      The board starts blank. Press <kbd>N</kbd> to reveal the next question and arm the buzzers
+      in one step. First contestant to hit <kbd>1</kbd> or <kbd>2</kbd> locks the other out; judge
+      with <kbd>R</kbd> (adds the full value) or <kbd>W</kbd> (subtracts half). Then <kbd>N</kbd>
+      again for the next one. <kbd>Space</kbd> re-arms the <i>same</i> question (for a steal),
+      and <kbd>P</kbd> steps back.<br><br>
       The <kbd>1</kbd>/<kbd>2</kbd> keys also match standard USB game-show buzzers, so you can add
       physical buttons later with no changes. Keep bumper music on a separate device through the PA.
     </p>
@@ -400,7 +415,7 @@ Leave blank to just read aloud"></textarea>
   let value = 100;           // current question's value
   let defaultValue = 100;    // fallback when a line has no override
   let questions = [];        // [{text, value|null}]
-  let qIndex = 0;
+  let qIndex = -1;           // -1 = not started (board blank)
   const scores = {1:0, 2:0};
   const names  = {1:'Contestant 1', 2:'Contestant 2'};
 
@@ -445,7 +460,7 @@ Leave blank to just read aloud"></textarea>
     const half = Math.round(value/2);
     worth.innerHTML = 'Correct <b>+'+value+'</b> &nbsp;·&nbsp; Wrong <s>&minus;'+half+'</s>';
 
-    if(questions.length){ qcount.style.display=''; qcount.textContent = 'Q '+(qIndex+1)+' / '+questions.length; }
+    if(questions.length && qIndex>=0){ qcount.style.display=''; qcount.textContent = 'Q '+(qIndex+1)+' / '+questions.length; }
     else { qcount.style.display='none'; }
 
     let b;
@@ -459,7 +474,7 @@ Leave blank to just read aloud"></textarea>
 
   function setQuestion(txt){
     if(txt && txt.trim()){ questionEl.textContent = txt.trim(); questionEl.classList.remove('is-empty'); }
-    else { questionEl.textContent = 'Read the question aloud, then press Space to arm the buzzers.'; questionEl.classList.add('is-empty'); }
+    else { questionEl.textContent = ''; questionEl.classList.add('is-empty'); }
   }
 
   // ---------- game flow ----------
@@ -486,23 +501,24 @@ Leave blank to just read aloud"></textarea>
       if(m) return {text:m[1].trim(), value:parseInt(m[2],10)};
       return {text:line, value:null};
     }).filter(Boolean);
-    if(qIndex >= questions.length) qIndex = Math.max(0, questions.length-1);
   }
-  function loadQuestion(i){
-    state='idle'; buzzed=0;
-    if(questions.length){
-      qIndex = Math.min(Math.max(0,i), questions.length-1);
-      const q = questions[qIndex];
-      value = (q.value!=null) ? q.value : defaultValue;
-      setQuestion(q.text);
-    } else {
-      value = defaultValue;
-      setQuestion('');
-    }
-    render(); broadcast();
+  function showQuestion(i){
+    qIndex = Math.min(Math.max(0,i), questions.length-1);
+    const q = questions[qIndex];
+    value = (q && q.value!=null) ? q.value : defaultValue;
+    setQuestion(q ? q.text : '');
   }
-  function nextQ(){ if(questions.length) loadQuestion(qIndex+1); }
-  function prevQ(){ if(questions.length) loadQuestion(qIndex-1); }
+  function blankBoard(){ state='idle'; buzzed=0; qIndex=-1; value=defaultValue; setQuestion(''); render(); broadcast(); }
+  function nextQ(){
+    if(!questions.length){ arm(); return; }   // no list: just arm (read aloud)
+    showQuestion(qIndex+1);                    // advance + display
+    arm();                                     // arm buzzers (renders + broadcasts)
+  }
+  function prevQ(){
+    if(!questions.length || qIndex<=0) return;
+    showQuestion(qIndex-1);
+    arm();
+  }
 
   // ---------- keyboard ----------
   function typing(e){ const t=e.target.tagName; return t==='INPUT'||t==='TEXTAREA'; }
@@ -548,8 +564,12 @@ Leave blank to just read aloud"></textarea>
 
   p1.addEventListener('input', ()=>{ names[1]=p1.value; render(); });
   p2.addEventListener('input', ()=>{ names[2]=p2.value; render(); });
-  qt.addEventListener('input', ()=>{ parseQuestions(qt.value); loadQuestion(qIndex); });
-  pv.addEventListener('input', ()=>{ defaultValue = Math.max(0, parseInt(pv.value||'0',10)); loadQuestion(qIndex); });
+  qt.addEventListener('input', ()=>{ parseQuestions(qt.value); blankBoard(); });
+  pv.addEventListener('input', ()=>{
+    defaultValue = Math.max(0, parseInt(pv.value||'0',10));
+    if(qIndex>=0 && questions[qIndex] && questions[qIndex].value==null) value = defaultValue;
+    render();
+  });
 
   // ---------- phone buzzers (WebRTC via PeerJS) ----------
   const lobby = document.getElementById('lobby');
