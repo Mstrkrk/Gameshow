@@ -485,6 +485,7 @@ A question with no answer line"></textarea>
   let defaultValue = 100;    // fallback when a line has no override
   let questions = [];        // [{text, value|null}]
   let qIndex = -1;           // -1 = not started (board blank)
+  let answerShown = false;   // has the answer been revealed for the current question?
   const scores = {1:0, 2:0};
   const names  = {1:'Contestant 1', 2:'Contestant 2'};
 
@@ -562,7 +563,7 @@ A question with no answer line"></textarea>
   // ---------- game flow ----------
   function arm(){
     if(questions.length && qIndex>=0) setQuestion(questions[qIndex].text);
-    state='live'; buzzed=0; sArm(); render(); broadcast(); startTimer();
+    state='live'; buzzed=0; answerShown=false; sArm(); render(); broadcast(); startTimer();
   }
   function buzz(p){
     if(state!=='live') return;
@@ -571,7 +572,8 @@ A question with no answer line"></textarea>
     (p===1?sBuzz1:sBuzz2)(); render(); broadcast();
   }
   function judge(correct){
-    if(state!=='buzzed') return;
+    if(state!=='buzzed' && state!=='answer') return;
+    if(!buzzed) return;                       // nobody to award
     const half = Math.round(value/2);
     if(correct){ scores[buzzed]+=value; state='right'; sRight(); }
     else       { scores[buzzed]-=half;  state='wrong'; sWrong(); }
@@ -623,13 +625,15 @@ A question with no answer line"></textarea>
   }
   function showQuestion(i){
     qIndex = Math.min(Math.max(0,i), questions.length-1);
+    answerShown = false;
     const q = questions[qIndex];
     value = (q && q.value!=null) ? q.value : defaultValue;
     setQuestion(q ? q.text : '');
   }
   function revealAnswer(){
     clearTimer();
-    state='answer'; buzzed=0;
+    state='answer';                                  // keep `buzzed` so R/W can still award
+    answerShown = true;
     const q = questions[qIndex];
     setQuestion('');                                  // clear is-empty/answer flags
     questionEl.textContent = (q && q.answer) ? q.answer : '—';
@@ -637,7 +641,7 @@ A question with no answer line"></textarea>
     questionEl.classList.add('is-answer');
     render(); broadcast();
   }
-  function blankBoard(){ clearTimer(); state='idle'; buzzed=0; qIndex=-1; value=defaultValue; setQuestion(''); render(); broadcast(); }
+  function blankBoard(){ clearTimer(); state='idle'; buzzed=0; qIndex=-1; answerShown=false; value=defaultValue; setQuestion(''); render(); broadcast(); }
 
   function gotoNextQuestion(){
     if(qIndex+1 >= questions.length){ showResults(); return; }
@@ -647,7 +651,7 @@ A question with no answer line"></textarea>
   function nextQ(){
     if(!questions.length){ arm(); return; }           // no list: just arm (read aloud)
     if(qIndex < 0){ showQuestion(0); arm(); return; }  // start
-    if(state === 'answer'){ gotoNextQuestion(); return; }
+    if(answerShown){ gotoNextQuestion(); return; }     // answer already up -> next
     // currently on a question: reveal its answer first (skip if it has none)
     if(questions[qIndex] && questions[qIndex].answer) revealAnswer();
     else gotoNextQuestion();
