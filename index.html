@@ -182,6 +182,7 @@
     color:var(--ink);max-width:46ch;padding:8px;overflow:auto;
   }
   .question.is-empty{color:var(--faint);font-weight:400;font-size:clamp(16px,1.8vw,24px);}
+  .question.is-answer{color:var(--right-ans);font-weight:700;}
 
   .banner{
     font-family:var(--display);
@@ -295,6 +296,7 @@
   }
   .timer__num.low{color:var(--wrong);}
   .stage[data-state="timeout"] .banner{color:var(--wrong);}
+  .stage[data-state="answer"] .banner{color:var(--right-ans);}
 
   /* ---- results splash ---- */
   .results{
@@ -377,7 +379,7 @@
     </div>
 
     <div class="hints">
-      <span><kbd>N</kbd>Next question + arm</span>
+      <span><kbd>N</kbd>Question &rarr; answer &rarr; next</span>
       <span><kbd>1</kbd><kbd>2</kbd>Buzz in (or &larr; &rarr;)</span>
       <span><kbd>R</kbd>Correct</span>
       <span><kbd>W</kbd>Wrong</span>
@@ -436,9 +438,9 @@
     </div>
     <div class="field">
       <label for="qtext">Questions — one per line</label>
-      <textarea id="qtext" rows="7" placeholder="Capital of Iowa?
-Tallest structure in Davenport? | 200
-Leave blank to just read aloud"></textarea>
+      <textarea id="qtext" rows="7" placeholder="What's the capital of Iowa? | Des Moines
+First book of the Bible? | Genesis | 200
+A question with no answer line"></textarea>
     </div>
     <div class="field">
       <label for="pvalue">Default point value</label>
@@ -448,13 +450,15 @@ Leave blank to just read aloud"></textarea>
     <button class="btn" id="closeSettings">Done</button>
     <p class="note">
       <b>How to run it</b><br>
-      Put one question per line. Add <kbd>| 200</kbd> at the end of a line to override that
-      question's points; otherwise it uses the default.<br><br>
-      The board starts blank. Press <kbd>N</kbd> to reveal the next question and arm the buzzers
-      in one step. First contestant to hit <kbd>1</kbd> or <kbd>2</kbd> locks the other out; judge
-      with <kbd>R</kbd> (adds the full value) or <kbd>W</kbd> (subtracts half). Then <kbd>N</kbd>
-      again for the next one. <kbd>Space</kbd> re-arms the <i>same</i> question (for a steal),
-      and <kbd>P</kbd> steps back.<br><br>
+      One item per line: <kbd>Question | Answer | Points</kbd>. The answer and points are
+      optional — <kbd>Question | Answer</kbd> uses the default points, and a trailing number is
+      always read as points.<br><br>
+      The board starts blank. <kbd>N</kbd> walks the show: reveal the question + arm buzzers →
+      <kbd>N</kbd> shows the answer → <kbd>N</kbd> moves to the next question + arms again. First
+      contestant to hit <kbd>1</kbd> or <kbd>2</kbd> locks the other out; judge with <kbd>R</kbd>
+      (full value) or <kbd>W</kbd> (minus half). If no one buzzes within 10 seconds the buzzers shut
+      off automatically. <kbd>Space</kbd> re-arms the same question (steal), <kbd>P</kbd> steps back.
+      After the last answer, <kbd>N</kbd> shows the final scores.<br><br>
       The <kbd>1</kbd>/<kbd>2</kbd> keys also match standard USB game-show buzzers, so you can add
       physical buttons later with no changes. Keep bumper music on a separate device through the PA.
     </p>
@@ -502,8 +506,17 @@ Leave blank to just read aloud"></textarea>
   const sArm   = ()=>tone([{f:520,d:0.09,type:'square',v:0.18},{f:780,d:0.11,at:0.08,type:'square',v:0.2}]);
   const sBuzz1 = ()=>tone([{f:330,d:0.12,type:'sawtooth',v:0.3},{f:330,d:0.12,at:0.14,type:'sawtooth',v:0.3}]);
   const sBuzz2 = ()=>tone([{f:494,d:0.12,type:'sawtooth',v:0.3},{f:494,d:0.12,at:0.14,type:'sawtooth',v:0.3}]);
-  const sRight = ()=>tone([{f:784,d:0.12,v:0.28},{f:1047,d:0.18,at:0.11,v:0.3},{f:1318,d:0.22,at:0.22,v:0.28}]);
-  const sWrong = ()=>tone([{f:200,d:0.45,type:'sawtooth',v:0.32},{f:150,d:0.45,type:'square',v:0.18}]);
+  const sRight = ()=>tone([
+    {f:880, d:0.30,type:'sine',v:0.22},            // strike
+    {f:1318,d:1.20,type:'sine',v:0.32},            // bell fundamental (E6)
+    {f:1976,d:1.05,type:'sine',v:0.16},            // partial
+    {f:2637,d:0.85,type:'sine',v:0.10},            // partial (E7)
+    {f:3136,d:0.65,type:'sine',v:0.05}             // shimmer
+  ]);
+  const sWrong = ()=>tone([
+    {f:150,d:0.34,type:'sawtooth',v:0.5},{f:153,d:0.34,type:'square',v:0.22},
+    {f:150,d:0.34,at:0.42,type:'sawtooth',v:0.5},{f:153,d:0.34,at:0.42,type:'square',v:0.22}
+  ]);
   const sTimeout = ()=>tone([{f:155,d:0.22,type:'sawtooth',v:0.34},{f:155,d:0.26,at:0.3,type:'sawtooth',v:0.34}]);
 
   // ---------- render ----------
@@ -536,16 +549,21 @@ Leave blank to just read aloud"></textarea>
     else if(state==='right')  b = 'Correct';
     else if(state==='wrong')  b = 'Wrong';
     else if(state==='timeout')b = "Time's up";
+    else if(state==='answer') b = 'Answer';
     banner.textContent = b;
   }
 
   function setQuestion(txt){
+    questionEl.classList.remove('is-answer');
     if(txt && txt.trim()){ questionEl.textContent = txt.trim(); questionEl.classList.remove('is-empty'); }
     else { questionEl.textContent = ''; questionEl.classList.add('is-empty'); }
   }
 
   // ---------- game flow ----------
-  function arm(){ state='live'; buzzed=0; sArm(); render(); broadcast(); startTimer(); }
+  function arm(){
+    if(questions.length && qIndex>=0) setQuestion(questions[qIndex].text);
+    state='live'; buzzed=0; sArm(); render(); broadcast(); startTimer();
+  }
   function buzz(p){
     if(state!=='live') return;
     clearTimer();
@@ -591,12 +609,16 @@ Leave blank to just read aloud"></textarea>
   }
 
   // ---------- question list ----------
+  // line format:  Question | Answer | Points   (answer and points optional)
   function parseQuestions(text){
     questions = (text||'').split('\n').map(line=>{
       line = line.trim(); if(!line) return null;
-      const m = line.match(/^(.*?)\s*\|\s*(\d+)\s*$/);   // "text | 200"
-      if(m) return {text:m[1].trim(), value:parseInt(m[2],10)};
-      return {text:line, value:null};
+      const parts = line.split('|').map(s=>s.trim());
+      let value = null;
+      if(parts.length>=2 && /^\d+$/.test(parts[parts.length-1])) value = parseInt(parts.pop(),10);
+      const text = parts[0];
+      const answer = parts.length>=2 ? (parts.slice(1).join(' | ') || null) : null;
+      return {text, answer, value};
     }).filter(Boolean);
   }
   function showQuestion(i){
@@ -605,17 +627,34 @@ Leave blank to just read aloud"></textarea>
     value = (q && q.value!=null) ? q.value : defaultValue;
     setQuestion(q ? q.text : '');
   }
+  function revealAnswer(){
+    clearTimer();
+    state='answer'; buzzed=0;
+    const q = questions[qIndex];
+    setQuestion('');                                  // clear is-empty/answer flags
+    questionEl.textContent = (q && q.answer) ? q.answer : '—';
+    questionEl.classList.remove('is-empty');
+    questionEl.classList.add('is-answer');
+    render(); broadcast();
+  }
   function blankBoard(){ clearTimer(); state='idle'; buzzed=0; qIndex=-1; value=defaultValue; setQuestion(''); render(); broadcast(); }
+
+  function gotoNextQuestion(){
+    if(qIndex+1 >= questions.length){ showResults(); return; }
+    showQuestion(qIndex+1); arm();
+  }
+  // N key: blank -> Q1(armed) -> Answer -> next Q(armed) -> ... -> results
   function nextQ(){
-    if(!questions.length){ arm(); return; }      // no list: just arm (read aloud)
-    if(qIndex+1 >= questions.length){ showResults(); return; }   // past the last question
-    showQuestion(qIndex+1);                       // advance + display
-    arm();                                        // arm buzzers (renders + broadcasts)
+    if(!questions.length){ arm(); return; }           // no list: just arm (read aloud)
+    if(qIndex < 0){ showQuestion(0); arm(); return; }  // start
+    if(state === 'answer'){ gotoNextQuestion(); return; }
+    // currently on a question: reveal its answer first (skip if it has none)
+    if(questions[qIndex] && questions[qIndex].answer) revealAnswer();
+    else gotoNextQuestion();
   }
   function prevQ(){
     if(!questions.length || qIndex<=0) return;
-    showQuestion(qIndex-1);
-    arm();
+    showQuestion(qIndex-1); arm();
   }
 
   // ---------- results splash ----------
