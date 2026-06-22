@@ -325,6 +325,24 @@
   .results__row.win{border-color:var(--right-ans);box-shadow:0 0 60px -10px var(--right-ans);}
   .results__winner{font-family:var(--title);font-weight:700;font-size:clamp(22px,3.4vw,38px);color:var(--ink);margin-bottom:24px;}
   .results__btns{display:flex;gap:12px;max-width:400px;margin:0 auto;}
+
+  /* ---- intro / walk-out splash ---- */
+  .intro{
+    position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(60,90,170,.22), transparent 60%),
+      linear-gradient(180deg,var(--bg-1),var(--bg-0));
+    opacity:0;pointer-events:none;transition:opacity .35s;
+  }
+  .intro.open{opacity:1;pointer-events:auto;}
+  .intro__card{width:min(720px,94vw);text-align:center;}
+  .intro__logo{height:clamp(78px,16vh,180px);margin-bottom:16px;filter:drop-shadow(0 12px 28px rgba(30,50,90,.3));}
+  .intro__eyebrow{font-family:var(--title);text-transform:uppercase;letter-spacing:.26em;font-size:13px;color:var(--muted);margin-bottom:8px;}
+  .intro__title{font-family:var(--title);font-weight:700;letter-spacing:-.015em;line-height:.92;font-size:clamp(40px,8vw,104px);margin:0;color:var(--ink);}
+  .intro__title::after{content:"";display:block;width:clamp(70px,9vw,120px);height:5px;margin:16px auto 0;border-radius:999px;background:linear-gradient(90deg,var(--left),var(--right));}
+  .intro__hint{color:var(--muted);font-size:15px;line-height:1.6;margin:22px 0 18px;}
+  .intro__hint b{color:var(--ink);}
+  .intro__btns{display:flex;gap:12px;max-width:460px;margin:0 auto;}
 </style>
 </head>
 <body>
@@ -332,7 +350,7 @@
 
     <header class="masthead">
       <div class="masthead__controls">
-        <button class="gear" id="phonesBtn" aria-label="Connect phones" title="Connect phones (C)" style="font-size:17px;">&#128241;</button>
+        <button class="gear" id="phonesBtn" aria-label="Connect phones" title="Connect phones (Q)" style="font-size:17px;">&#128241;</button>
         <button class="gear" id="gearBtn" aria-label="Settings">&#9881;</button>
       </div>
       <img src="assets/bethel-church.png" alt="Bethel Church" class="masthead__logo">
@@ -385,8 +403,27 @@
       <span><kbd>W</kbd>Wrong</span>
       <span><kbd>Space</kbd>Re-arm (steal)</span>
       <span><kbd>P</kbd>Previous &nbsp;·&nbsp; <kbd>Esc</kbd>Reset</span>
+      <span style="opacity:.8;">Sounds <kbd>Z</kbd>intro <kbd>X</kbd>title <kbd>C</kbd>welcome <kbd>V</kbd>walk-off <kbd>B</kbd>rimshot</span>
     </div>
   </div>
+
+  <!-- intro / walk-out splash -->
+  <div class="intro open" id="intro" aria-hidden="false">
+    <div class="intro__card">
+      <img src="assets/bethel-church.png" alt="Bethel Church" class="intro__logo">
+      <div class="intro__eyebrow">Bethel Church &middot; Garden Produce Season</div>
+      <h1 class="intro__title">The Garden Showdown</h1>
+      <div class="intro__hint">Press <b>Space</b> (or tap Play) to start the walk-out theme &middot; press <b>N</b> when you're ready to begin</div>
+      <div class="intro__btns">
+        <button class="btn" id="introPlay">&#9654; Play theme</button>
+        <button class="btn" id="introBegin">Begin show &rarr;</button>
+      </div>
+    </div>
+  </div>
+  <audio id="theme" src="assets/2026Intro.mp3" preload="auto"></audio>
+  <audio id="sndTitle" src="assets/title.mp3" preload="auto"></audio>
+  <audio id="sndWelcome" src="assets/welcome.mp3" preload="auto"></audio>
+  <audio id="sndWalkoff" src="assets/walkoff.mp3" preload="auto"></audio>
 
   <!-- results splash -->
   <div class="results" id="results" aria-hidden="true">
@@ -460,7 +497,12 @@ A question with no answer line"></textarea>
       off automatically. <kbd>Space</kbd> re-arms the same question (steal), <kbd>P</kbd> steps back.
       After the last answer, <kbd>N</kbd> shows the final scores.<br><br>
       The <kbd>1</kbd>/<kbd>2</kbd> keys also match standard USB game-show buzzers, so you can add
-      physical buttons later with no changes. Keep bumper music on a separate device through the PA.
+      physical buttons later with no changes.<br><br>
+      <b>Sound cues</b> (bottom row): <kbd>Z</kbd> walk-in theme · <kbd>X</kbd> "Garden Showdown"
+      title · <kbd>C</kbd> welcome contestants · <kbd>V</kbd> walk-off music · <kbd>B</kbd> rimshot.
+      Z and V are music (press again to stop); the rest are one-shots. The phone-QR panel is now
+      <kbd>Q</kbd>. Drop your clips in <kbd>assets/</kbd> as <kbd>title.mp3</kbd>,
+      <kbd>welcome.mp3</kbd>, and <kbd>walkoff.mp3</kbd> (the rimshot is built in).
     </p>
   </aside>
 
@@ -688,10 +730,73 @@ A question with no answer line"></textarea>
   document.getElementById('resultsNew').addEventListener('click', ()=>closeResults(false));
   document.getElementById('resultsClose').addEventListener('click', ()=>closeResults(true));
 
+  // ---------- intro / walk-out theme + soundboard ----------
+  const introEl = document.getElementById('intro');
+  const theme = document.getElementById('theme');
+  const sndTitle = document.getElementById('sndTitle');
+  const sndWelcome = document.getElementById('sndWelcome');
+  const sndWalkoff = document.getElementById('sndWalkoff');
+  const introPlay = document.getElementById('introPlay');
+  let currentMusic = null;
+  function syncIntroBtn(){ introPlay.innerHTML = theme.paused ? '&#9654; Play theme' : '&#10073;&#10073; Pause theme'; }
+  function playMusic(el){
+    audio();                                   // unlock audio on this gesture
+    if(currentMusic && currentMusic!==el){ currentMusic.pause(); currentMusic.currentTime=0; }
+    if(el.paused){ el.currentTime=0; el.play().catch(()=>{}); currentMusic=el; }
+    else { el.pause(); el.currentTime=0; currentMusic=null; }
+    syncIntroBtn();
+  }
+  function playStinger(el){ audio(); try{ el.currentTime=0; el.play().catch(()=>{}); }catch(e){} }
+  function stopTheme(){ theme.pause(); theme.currentTime=0; if(currentMusic===theme) currentMusic=null; syncIntroBtn(); }
+  function toggleTheme(){ playMusic(theme); }
+  [theme,sndWalkoff].forEach(el=>el.addEventListener('ended', ()=>{ if(currentMusic===el) currentMusic=null; syncIntroBtn(); }));
+
+  // synth rimshot: ba-dum-tss (no file needed)
+  function playRimshot(){
+    const c = audio(), t = c.currentTime;
+    const hit=(at,f)=>{
+      const o=c.createOscillator(), g=c.createGain();
+      o.type='triangle';
+      o.frequency.setValueAtTime(f,t+at); o.frequency.exponentialRampToValueAtTime(f*0.5,t+at+0.12);
+      g.gain.setValueAtTime(0.0001,t+at); g.gain.exponentialRampToValueAtTime(0.5,t+at+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t+at+0.16);
+      o.connect(g).connect(c.destination); o.start(t+at); o.stop(t+at+0.18);
+    };
+    hit(0,190); hit(0.16,150);
+    const dur=0.45, buf=c.createBuffer(1, Math.floor(c.sampleRate*dur), c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const src=c.createBufferSource(); src.buffer=buf;
+    const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6000;
+    const g=c.createGain();
+    g.gain.setValueAtTime(0.0001,t+0.30); g.gain.exponentialRampToValueAtTime(0.4,t+0.31); g.gain.exponentialRampToValueAtTime(0.0001,t+0.30+dur);
+    src.connect(hp).connect(g).connect(c.destination); src.start(t+0.30); src.stop(t+0.30+dur);
+  }
+
+  // bottom-row soundboard: Z X C V B
+  function handleSoundboard(k){
+    switch(k){
+      case 'z': case 'Z': playMusic(theme);      return true;   // walk-in theme
+      case 'x': case 'X': playStinger(sndTitle);  return true;   // "THE GARDEN SHOWDOWN"
+      case 'c': case 'C': playStinger(sndWelcome); return true;  // welcome contestants
+      case 'v': case 'V': playMusic(sndWalkoff);  return true;   // walk-off music
+      case 'b': case 'B': playRimshot();          return true;   // ba-dum-tss
+    }
+    return false;
+  }
+
+  function closeIntro(){ stopTheme(); introEl.classList.remove('open'); introEl.setAttribute('aria-hidden','true'); }
+  introPlay.addEventListener('click', toggleTheme);
+  document.getElementById('introBegin').addEventListener('click', closeIntro);
+
   // ---------- keyboard ----------
   function typing(e){ const t=e.target.tagName; return t==='INPUT'||t==='TEXTAREA'; }
   document.addEventListener('keydown', e=>{
     if(typing(e)) return;
+    if(handleSoundboard(e.key)) return;        // Z X C V B sound cues, always live
+    if(introEl.classList.contains('open')){
+      if(e.key===' '){ e.preventDefault(); toggleTheme(); }
+      else if(e.key==='n'||e.key==='N'||e.key==='Enter'||e.key==='Escape'){ closeIntro(); }
+      return;
+    }
     if(state==='results'){ if(e.key==='Escape') closeResults(true); return; }
     switch(e.key){
       case ' ': e.preventDefault(); arm(); break;
@@ -706,8 +811,9 @@ A question with no answer line"></textarea>
         break;
       case 'n': case 'N': nextQ(); break;
       case 'p': case 'P': prevQ(); break;
+      case 't': case 'T': toggleTheme(); break;
       case 's': case 'S': openSettings(); break;
-      case 'c': case 'C': toggleLobby(); break;
+      case 'q': case 'Q': toggleLobby(); break;
     }
   });
 
