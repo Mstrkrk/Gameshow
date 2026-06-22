@@ -338,26 +338,53 @@
   .intro__card{width:min(720px,94vw);text-align:center;}
   .intro__logo{height:clamp(78px,16vh,180px);margin-bottom:16px;filter:drop-shadow(0 12px 28px rgba(30,50,90,.3));}
   .intro__eyebrow{font-family:var(--title);text-transform:uppercase;letter-spacing:.26em;font-size:13px;color:var(--muted);margin-bottom:8px;}
-  .intro__title{font-family:var(--title);font-weight:700;letter-spacing:-.015em;line-height:.92;font-size:clamp(40px,8vw,104px);margin:0;color:var(--ink);opacity:0;}
-  .intro__title.show{opacity:1;animation:slamIn .32s cubic-bezier(.2,.7,.3,1) both;}
-  .intro__title::after{content:"";display:block;width:clamp(70px,9vw,120px);height:5px;margin:16px auto 0;border-radius:999px;background:linear-gradient(90deg,var(--left),var(--right));}
-  .intro__card.shake{animation:quake .6s cubic-bezier(.36,.07,.19,.97) both;}
+  .intro__card{width:min(900px,96vw);text-align:center;position:relative;}
+  .intro__flash{position:absolute;left:50%;top:50%;width:160vmax;height:160vmax;transform:translate(-50%,-50%) scale(.4);border-radius:50%;pointer-events:none;opacity:0;mix-blend-mode:screen;
+    background:radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,236,176,.45) 38%, transparent 70%);}
+  .intro__flash.show{animation:flashHit .6s ease-out both;}
+  .intro__ring{position:absolute;left:50%;top:50%;width:60px;height:60px;border-radius:50%;border:5px solid rgba(255,255,255,.65);transform:translate(-50%,-50%) scale(0);opacity:0;pointer-events:none;}
+  .intro__ring.show{animation:ringOut .75s .12s ease-out both;}
+  .intro__title{
+    font-family:var(--title);font-weight:700;text-transform:uppercase;
+    letter-spacing:-.02em;line-height:.88;
+    font-size:clamp(52px,10.5vw,168px);margin:0;color:var(--ink);opacity:0;position:relative;
+    text-shadow:0 10px 50px rgba(30,50,90,.28);
+  }
+  .intro__title.show{opacity:1;animation:slamIn .42s cubic-bezier(.16,.85,.25,1) both;}
+  .intro__title::after{content:"";display:block;width:clamp(96px,13vw,200px);height:6px;margin:20px auto 0;border-radius:999px;background:linear-gradient(90deg,var(--left),var(--right));transform:scaleX(1);transform-origin:center;}
+  .intro__title.show::after{animation:barOut .55s .28s cubic-bezier(.2,.8,.2,1) both;}
   @keyframes slamIn{
-    0%{opacity:0;transform:scale(2.7);filter:blur(9px);}
-    60%{opacity:1;transform:scale(.9);filter:blur(0);}
-    80%{transform:scale(1.04);}
+    0%{opacity:0;transform:scale(4.6);filter:blur(16px);}
+    52%{opacity:1;transform:scale(.86);filter:blur(0);}
+    70%{transform:scale(1.12);}
+    85%{transform:scale(.97);}
     100%{transform:scale(1);}
   }
+  @keyframes barOut{ from{transform:scaleX(0);} to{transform:scaleX(1);} }
+  @keyframes flashHit{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.4);}
+    40%{opacity:.95;transform:translate(-50%,-50%) scale(1.0);}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.5);}
+  }
+  @keyframes ringOut{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.2);}
+    18%{opacity:.75;}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(16);}
+  }
+  .intro__card.shake{animation:quake .78s cubic-bezier(.36,.07,.19,.97) both;}
   @keyframes quake{
-    10%{transform:translate(-10px,6px) rotate(-1deg);}
-    20%{transform:translate(9px,-7px) rotate(1deg);}
-    30%{transform:translate(-8px,5px) rotate(-.7deg);}
-    40%{transform:translate(7px,-5px) rotate(.7deg);}
-    50%{transform:translate(-6px,4px);}
-    60%{transform:translate(5px,-3px);}
-    70%{transform:translate(-4px,2px);}
+    0%{transform:scale(1.03);}
+    8%{transform:translate(-18px,10px) rotate(-1.8deg);}
+    16%{transform:translate(16px,-12px) rotate(1.8deg);}
+    24%{transform:translate(-14px,9px) rotate(-1.3deg);}
+    32%{transform:translate(12px,-9px) rotate(1.3deg);}
+    40%{transform:translate(-10px,7px) rotate(-.9deg);}
+    48%{transform:translate(9px,-6px) rotate(.9deg);}
+    56%{transform:translate(-7px,4px);}
+    64%{transform:translate(5px,-3px);}
+    72%{transform:translate(-4px,2px);}
     80%{transform:translate(3px,-2px);}
-    90%{transform:translate(-2px,1px);}
+    90%{transform:translate(-1px,1px);}
     100%{transform:translate(0,0);}
   }
   .intro__hint{color:var(--muted);font-size:15px;line-height:1.6;margin:22px 0 18px;}
@@ -430,6 +457,8 @@
   <!-- intro / walk-out splash -->
   <div class="intro open" id="intro" aria-hidden="false">
     <div class="intro__card" id="introCard">
+      <div class="intro__flash" id="introFlash"></div>
+      <div class="intro__ring" id="introRing"></div>
       <img src="assets/bethel-church.png" alt="Bethel Church" class="intro__logo">
       <h1 class="intro__title" id="introTitle">The Garden Showdown</h1>
     </div>
@@ -798,8 +827,16 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   // title slams in 9s after the walk-in theme starts
   const introTitle = document.getElementById('introTitle');
   const introCard = document.getElementById('introCard');
+  const introFlash = document.getElementById('introFlash');
+  const introRing = document.getElementById('introRing');
   let titleTimer = null, titleShown = false;
-  function revealTitle(){ if(titleShown) return; titleShown = true; introTitle.classList.add('show'); introCard.classList.add('shake'); }
+  function revealTitle(){
+    if(titleShown) return; titleShown = true;
+    introTitle.classList.add('show');
+    introCard.classList.add('shake');
+    introFlash.classList.add('show');
+    introRing.classList.add('show');
+  }
   theme.addEventListener('play',  ()=>{ if(!titleShown){ clearTimeout(titleTimer); titleTimer = setTimeout(revealTitle, 9000); } });
   theme.addEventListener('pause', ()=>{ if(!titleShown) clearTimeout(titleTimer); });
 
