@@ -424,6 +424,7 @@
   <audio id="sndTitle" src="assets/title.mp3" preload="auto"></audio>
   <audio id="sndWelcome" src="assets/welcome.mp3" preload="auto"></audio>
   <audio id="sndWalkoff" src="assets/walkoff.mp3" preload="auto"></audio>
+  <audio id="sndRimshot" src="assets/rimshot.mp3" preload="auto"></audio>
 
   <!-- results splash -->
   <div class="results" id="results" aria-hidden="true">
@@ -502,7 +503,8 @@ A question with no answer line"></textarea>
       title · <kbd>C</kbd> welcome contestants · <kbd>V</kbd> walk-off music · <kbd>B</kbd> rimshot.
       Z and V are music (press again to stop); the rest are one-shots. The phone-QR panel is now
       <kbd>Q</kbd>. Drop your clips in <kbd>assets/</kbd> as <kbd>title.mp3</kbd>,
-      <kbd>welcome.mp3</kbd>, and <kbd>walkoff.mp3</kbd> (the rimshot is built in).
+      <kbd>welcome.mp3</kbd>, <kbd>walkoff.mp3</kbd>, and <kbd>rimshot.mp3</kbd> (a built-in synth
+      rimshot plays until the file is added).
     </p>
   </aside>
 
@@ -736,22 +738,43 @@ A question with no answer line"></textarea>
   const sndTitle = document.getElementById('sndTitle');
   const sndWelcome = document.getElementById('sndWelcome');
   const sndWalkoff = document.getElementById('sndWalkoff');
+  const sndRimshot = document.getElementById('sndRimshot');
+  let rimshotOk = false;
+  sndRimshot.addEventListener('canplay', ()=>{ rimshotOk = true; });
+  sndRimshot.addEventListener('error',   ()=>{ rimshotOk = false; });
   const introPlay = document.getElementById('introPlay');
-  let currentMusic = null;
+  const musicEls = [theme, sndWalkoff];
+  const FADE = { musicIn:350, musicOut:1300, sfxIn:0, sfxOut:450 };
   function syncIntroBtn(){ introPlay.innerHTML = theme.paused ? '&#9654; Play theme' : '&#10073;&#10073; Pause theme'; }
-  function playMusic(el){
-    audio();                                   // unlock audio on this gesture
-    if(currentMusic && currentMusic!==el){ currentMusic.pause(); currentMusic.currentTime=0; }
-    if(el.paused){ el.currentTime=0; el.play().catch(()=>{}); currentMusic=el; }
-    else { el.pause(); el.currentTime=0; currentMusic=null; }
-    syncIntroBtn();
+  function fade(el, to, ms, done){
+    if(el._fade){ clearInterval(el._fade); el._fade=null; }
+    if(ms<=0){ el.volume = Math.min(1,Math.max(0,to)); if(done) done(); return; }
+    const from = el.volume, steps = Math.max(1, Math.round(ms/30)); let i=0;
+    el._fade = setInterval(()=>{
+      i++; el.volume = Math.min(1, Math.max(0, from + (to-from)*(i/steps)));
+      if(i>=steps){ clearInterval(el._fade); el._fade=null; if(done) done(); }
+    }, 30);
   }
-  function playStinger(el){ audio(); try{ el.currentTime=0; el.play().catch(()=>{}); }catch(e){} }
-  function stopTheme(){ theme.pause(); theme.currentTime=0; if(currentMusic===theme) currentMusic=null; syncIntroBtn(); }
-  function toggleTheme(){ playMusic(theme); }
-  [theme,sndWalkoff].forEach(el=>el.addEventListener('ended', ()=>{ if(currentMusic===el) currentMusic=null; syncIntroBtn(); }));
+  // press to play (fade in), press again to pause (fade out, keep position)
+  function toggleClip(el, isMusic){
+    audio();
+    const tIn = isMusic?FADE.musicIn:FADE.sfxIn, tOut = isMusic?FADE.musicOut:FADE.sfxOut;
+    if(el.paused){
+      if(isMusic) musicEls.forEach(m=>{ if(m!==el && !m.paused) fade(m,0,FADE.musicOut,()=>{ m.pause(); m.volume=1; }); });
+      if(el.ended) el.currentTime = 0;
+      el.volume = tIn>0 ? 0 : 1;
+      el.play().catch(()=>{});
+      if(tIn>0) fade(el, 1, tIn);
+      syncIntroBtn();
+    } else {
+      fade(el, 0, tOut, ()=>{ el.pause(); el.volume=1; syncIntroBtn(); });
+    }
+  }
+  function stopTheme(){ fade(theme, 0, FADE.musicOut, ()=>{ theme.pause(); theme.currentTime=0; theme.volume=1; syncIntroBtn(); }); }
+  function toggleTheme(){ toggleClip(theme, true); }
+  musicEls.forEach(el=>el.addEventListener('ended', syncIntroBtn));
 
-  // synth rimshot: ba-dum-tss (no file needed)
+  // synth rimshot: ba-dum-tss (fallback if no file)
   function playRimshot(){
     const c = audio(), t = c.currentTime;
     const hit=(at,f)=>{
@@ -771,14 +794,21 @@ A question with no answer line"></textarea>
     src.connect(hp).connect(g).connect(c.destination); src.start(t+0.30); src.stop(t+0.30+dur);
   }
 
-  // bottom-row soundboard: Z X C V B
+  // rimshot: toggle the uploaded file if it loaded, otherwise fire the synth fallback
+  function playRimshotCue(){
+    audio();
+    if(rimshotOk) toggleClip(sndRimshot, false);
+    else playRimshot();
+  }
+
+  // bottom-row soundboard: Z X C V B  (press again pauses)
   function handleSoundboard(k){
     switch(k){
-      case 'z': case 'Z': playMusic(theme);      return true;   // walk-in theme
-      case 'x': case 'X': playStinger(sndTitle);  return true;   // "THE GARDEN SHOWDOWN"
-      case 'c': case 'C': playStinger(sndWelcome); return true;  // welcome contestants
-      case 'v': case 'V': playMusic(sndWalkoff);  return true;   // walk-off music
-      case 'b': case 'B': playRimshot();          return true;   // ba-dum-tss
+      case 'z': case 'Z': toggleClip(theme, true);     return true;  // walk-in theme
+      case 'x': case 'X': toggleClip(sndTitle, false);  return true;  // "THE GARDEN SHOWDOWN"
+      case 'c': case 'C': toggleClip(sndWelcome, false); return true; // welcome contestants
+      case 'v': case 'V': toggleClip(sndWalkoff, true);  return true; // walk-off music
+      case 'b': case 'B': playRimshotCue();              return true; // rimshot (file or synth)
     }
     return false;
   }
