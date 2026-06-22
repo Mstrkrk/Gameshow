@@ -811,7 +811,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     const tIn = isMusic?FADE.musicIn:FADE.sfxIn, tOut = isMusic?FADE.musicOut:FADE.sfxOut;
     if(el.paused){
       if(isMusic) musicEls.forEach(m=>{ if(m!==el && !m.paused) fade(m,0,FADE.musicOut,()=>{ m.pause(); m.volume=1; }); });
-      if(el.ended) el.currentTime = 0;
+      el.currentTime = 0;                        // always start from the beginning
       el.volume = tIn>0 ? 0 : 1;
       el.play().catch(()=>{});
       if(tIn>0) fade(el, 1, tIn);
