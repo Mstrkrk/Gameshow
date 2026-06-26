@@ -396,7 +396,7 @@
   .garden{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
   .garden--intro{position:absolute;}
   .garden .vine{position:absolute;width:clamp(150px,19vw,320px);aspect-ratio:1;color:#3fae6b;}
-  .garden .veg{position:absolute;width:clamp(40px,5vw,72px);aspect-ratio:1;}
+  .garden .veg{position:absolute;width:clamp(64px,9vw,150px);aspect-ratio:1;}
   .vine--tl{top:-14px;left:-14px;}
   .vine--tr{top:-14px;right:-14px;transform:scaleX(-1);}
   .vine--bl{bottom:-14px;left:-14px;transform:scaleY(-1);}
@@ -410,7 +410,21 @@
   .veg--2{top:26px;right:30px;transform:rotate(12deg);}
   .intro__card{z-index:1;}
   /* veggie marks on the buzzer labels */
-  .tag-veg{width:18px;height:18px;vertical-align:-3px;margin-right:7px;}
+  .tag-veg{width:22px;height:22px;vertical-align:-4px;margin-right:8px;}
+
+  /* ---- splash "bloom" at 14s: veggies sprout up under the music ---- */
+  .intro__bloom{position:absolute;inset:0;z-index:0;pointer-events:none;}
+  .intro__bloom .sprout{position:absolute;width:clamp(50px,7vw,116px);aspect-ratio:1;transform:translate(-50%,0) scale(0);opacity:0;transform-origin:center bottom;}
+  .intro__bloom.bloom .sprout{animation:sproutPop .55s var(--d) cubic-bezier(.2,1.3,.4,1) both, sproutFloat 3.6s calc(var(--d) + .55s) ease-in-out infinite;}
+  @keyframes sproutPop{
+    0%{opacity:0;transform:translate(-50%,34px) scale(0);}
+    70%{opacity:1;transform:translate(-50%,-6px) scale(1.14);}
+    100%{opacity:1;transform:translate(-50%,0) scale(1);}
+  }
+  @keyframes sproutFloat{
+    0%,100%{transform:translate(-50%,0) scale(1);}
+    50%{transform:translate(-50%,-11px) scale(1);}
+  }
 </style>
 </head>
 <body>
@@ -438,6 +452,14 @@
       <path d="M30 25 C28 16 23 12 17 12 C23 14 26 18 27 23 Z" fill="#3fae6b"/>
       <path d="M31 25 C33 15 38 11 44 12 C38 13 34 18 33 23 Z" fill="#3fae6b"/>
       <path d="M31 24 C31 14 31 10 31 8 C32 12 33 17 32 23 Z" fill="#3fae6b"/>
+    </symbol>
+    <symbol id="gx-leaf" viewBox="0 0 64 64">
+      <path d="M14 50 C14 24 34 12 52 12 C52 34 36 52 14 50 Z" fill="#3fae6b"/>
+      <path d="M20 46 C30 36 42 24 50 16" stroke="#2c8a52" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="gx-pepper" viewBox="0 0 64 64">
+      <path d="M41 15 C46 23 45 36 37 46 C29 56 18 53 16 45 C26 47 32 41 34 31 C36 23 37 17 41 15 Z" fill="#e8503a"/>
+      <path d="M41 15 C39 10 43 8 47 9 C45 12 45 14 43 17 Z" fill="#3fae6b"/>
     </symbol>
   </svg>
 
@@ -517,6 +539,15 @@
       <svg class="vine vine--br"><use href="#gx-vine"></use></svg>
       <svg class="veg veg--1"><use href="#gx-tomato"></use></svg>
       <svg class="veg veg--2"><use href="#gx-carrot"></use></svg>
+    </div>
+    <div class="intro__bloom" id="introBloom" aria-hidden="true">
+      <svg class="sprout" style="--d:0s;left:7%;bottom:6%"><use href="#gx-carrot"></use></svg>
+      <svg class="sprout" style="--d:.08s;left:20%;bottom:3%"><use href="#gx-tomato"></use></svg>
+      <svg class="sprout" style="--d:.16s;left:33%;bottom:8%"><use href="#gx-leaf"></use></svg>
+      <svg class="sprout" style="--d:.24s;left:50%;bottom:2.5%"><use href="#gx-pepper"></use></svg>
+      <svg class="sprout" style="--d:.32s;left:67%;bottom:8%"><use href="#gx-tomato"></use></svg>
+      <svg class="sprout" style="--d:.40s;left:80%;bottom:3%"><use href="#gx-carrot"></use></svg>
+      <svg class="sprout" style="--d:.48s;left:93%;bottom:6%"><use href="#gx-leaf"></use></svg>
     </div>
     <div class="intro__card" id="introCard">
       <div class="intro__flash" id="introFlash"></div>
@@ -891,7 +922,9 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   const introCard = document.getElementById('introCard');
   const introFlash = document.getElementById('introFlash');
   const introRing = document.getElementById('introRing');
+  const introBloom = document.getElementById('introBloom');
   let titleTimer = null, titleShown = false;
+  let bloomTimer = null, bloomShown = false;
   function revealTitle(){
     if(titleShown) return; titleShown = true;
     introTitle.classList.add('show');
@@ -899,8 +932,15 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     introFlash.classList.add('show');
     introRing.classList.add('show');
   }
-  theme.addEventListener('play',  ()=>{ if(!titleShown){ clearTimeout(titleTimer); titleTimer = setTimeout(revealTitle, 9000); } });
-  theme.addEventListener('pause', ()=>{ if(!titleShown) clearTimeout(titleTimer); });
+  function revealBloom(){ if(bloomShown) return; bloomShown = true; introBloom.classList.add('bloom'); }
+  theme.addEventListener('play',  ()=>{
+    if(!titleShown){ clearTimeout(titleTimer); titleTimer = setTimeout(revealTitle,  9000); }
+    if(!bloomShown){ clearTimeout(bloomTimer); bloomTimer = setTimeout(revealBloom, 14000); }
+  });
+  theme.addEventListener('pause', ()=>{
+    if(!titleShown) clearTimeout(titleTimer);
+    if(!bloomShown) clearTimeout(bloomTimer);
+  });
 
   // synth rimshot: ba-dum-tss (fallback if no file)
   function playRimshot(){
