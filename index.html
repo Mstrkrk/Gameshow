@@ -901,7 +901,8 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   const introRing = document.getElementById('introRing');
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let titleTimer = null, titleShown = false;
-  let analyser=null, freqData=null, mediaSrc=null, danceRAF=null, energy=0;
+  let analyser=null, freqData=null, mediaSrc=null, danceRAF=null;
+  let baseline=0, pulse=0, lastBeat=0, lastFrame=0;
 
   function startLoop(){ if(!reduceMotion && !danceRAF) danceRAF = requestAnimationFrame(danceFrame); }
   function revealTitle(){
@@ -919,28 +920,31 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     try{
       const c = audio();
       mediaSrc = c.createMediaElementSource(theme);
-      analyser = c.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.55;
+      analyser = c.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.4;
       freqData = new Uint8Array(analyser.frequencyBinCount);
       mediaSrc.connect(analyser); analyser.connect(c.destination);
     }catch(e){ analyser = null; }     // graceful: falls back to a static title
   }
   function danceFrame(now){
     if(!introEl.classList.contains('open')){ danceRAF=null; return; }   // stop once splash is dismissed
+    const dt = lastFrame ? Math.min(60, now-lastFrame) : 16; lastFrame = now;
     let inst=0;
     if(analyser){
       analyser.getByteFrequencyData(freqData);
-      let sum=0, n=Math.min(40, freqData.length);
+      let sum=0, n=Math.min(8, freqData.length);          // low/bass bins → the beat
       for(let i=0;i<n;i++) sum+=freqData[i];
       inst=(sum/n)/255;
     }
-    energy = inst>energy ? inst : energy*0.78 + inst*0.22;   // snappy attack, quick release
+    baseline = baseline*0.95 + inst*0.05;                 // slow-moving average
+    // distinct beat: a sharp jump above the running average (and above an absolute floor), debounced
+    if(inst > 0.16 && inst > baseline*1.35 + 0.05 && (now - lastBeat) > 200){ pulse = 1; lastBeat = now; }
+    pulse = Math.max(0, pulse - dt/165);                  // snap, then fall back to static
     if(titleShown){
-      const e = energy;
-      introTitle.style.transform = 'scale('+(1 + e*0.24).toFixed(3)+') translateY('+(-e*12).toFixed(1)+'px)';
+      introTitle.style.transform = 'scale('+(1 + pulse*0.22).toFixed(3)+') translateY('+(-pulse*12).toFixed(1)+'px)';
       introTitle.style.textShadow =
-        '0 0 '+(16 + e*110).toFixed(0)+'px rgba(255,206,110,'+(0.22 + e*0.7).toFixed(2)+'), '+
-        '0 0 '+(40 + e*150).toFixed(0)+'px rgba(247,167,40,'+(e*0.5).toFixed(2)+'), '+
-        '0 '+(8 + e*20).toFixed(0)+'px '+(30 + e*50).toFixed(0)+'px rgba(30,50,90,.32)';
+        '0 0 '+(pulse*130).toFixed(0)+'px rgba(255,206,110,'+(pulse*0.85).toFixed(2)+'), '+
+        '0 0 '+(pulse*70).toFixed(0)+'px rgba(247,167,40,'+(pulse*0.5).toFixed(2)+'), '+
+        '0 10px 50px rgba(30,50,90,.28)';
     }
     danceRAF=requestAnimationFrame(danceFrame);
   }
