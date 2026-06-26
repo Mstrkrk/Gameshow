@@ -901,6 +901,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   const introRing = document.getElementById('introRing');
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let titleTimer = null, titleShown = false;
+  let beatsTimer = null, beatsStarted = false;
   let analyser=null, freqData=null, mediaSrc=null, danceRAF=null;
   let baseline=0, pulse=0, lastBeat=0, lastFrame=0, prevLevel=0, fluxAvg=0;
 
@@ -911,8 +912,9 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     introCard.classList.add('shake');
     introFlash.classList.add('show');
     introRing.classList.add('show');
-    startLoop();                          // title starts pulsing to the music
+    // stays static here — beats start at the 14s mark
   }
+  function revealBeats(){ if(beatsStarted) return; beatsStarted = true; startLoop(); }
 
   // tap the playing theme so the title can react to the music
   function setupAnalyser(){
@@ -940,11 +942,10 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     if(level > 0.06 && flux > fluxAvg*1.4 + 0.006 && (now - lastBeat) > 150){ pulse = 1; lastBeat = now; }
     pulse = Math.max(0, pulse - dt/210);                                   // snap, then settle to static
     if(titleShown){
-      const drive = Math.max(pulse, level*0.45);        // beats punch; loud sustained parts still move; quiet = static
-      introTitle.style.transform = 'scale('+(1 + drive*0.24).toFixed(3)+') translateY('+(-drive*13).toFixed(1)+'px)';
+      introTitle.style.transform = 'scale('+(1 + pulse*0.26).toFixed(3)+') translateY('+(-pulse*14).toFixed(1)+'px)';
       introTitle.style.textShadow =
-        '0 0 '+(pulse*140).toFixed(0)+'px rgba(255,206,110,'+(pulse*0.9).toFixed(2)+'), '+
-        '0 0 '+(pulse*80).toFixed(0)+'px rgba(247,167,40,'+(pulse*0.55).toFixed(2)+'), '+
+        '0 0 '+(pulse*150).toFixed(0)+'px rgba(255,206,110,'+(pulse*0.9).toFixed(2)+'), '+
+        '0 0 '+(pulse*85).toFixed(0)+'px rgba(247,167,40,'+(pulse*0.55).toFixed(2)+'), '+
         '0 10px 50px rgba(30,50,90,.28)';
     }
     danceRAF=requestAnimationFrame(danceFrame);
@@ -953,8 +954,12 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   theme.addEventListener('play',  ()=>{
     setupAnalyser();
     if(!titleShown){ clearTimeout(titleTimer); titleTimer = setTimeout(revealTitle, 9000); }
+    if(!beatsStarted){ clearTimeout(beatsTimer); beatsTimer = setTimeout(revealBeats, 14000); }
   });
-  theme.addEventListener('pause', ()=>{ if(!titleShown) clearTimeout(titleTimer); });
+  theme.addEventListener('pause', ()=>{
+    if(!titleShown) clearTimeout(titleTimer);
+    if(!beatsStarted) clearTimeout(beatsTimer);
+  });
 
   // synth rimshot: ba-dum-tss (fallback if no file)
   function playRimshot(){
