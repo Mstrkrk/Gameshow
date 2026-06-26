@@ -49,6 +49,8 @@
     grid-template-rows:auto 1fr auto;
     padding:clamp(14px,2.4vw,34px);
     gap:clamp(12px,1.6vw,22px);
+    position:relative;
+    z-index:1;
   }
 
   /* ---- masthead ---- */
@@ -390,9 +392,61 @@
   .intro__hint{color:var(--muted);font-size:15px;line-height:1.6;margin:22px 0 18px;}
   .intro__hint b{color:var(--ink);}
   .intro__btns{display:flex;gap:12px;max-width:460px;margin:0 auto;}
+  /* ---- garden decorations ---- */
+  .garden{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .garden--intro{position:absolute;}
+  .garden .vine{position:absolute;width:clamp(150px,19vw,320px);aspect-ratio:1;color:#3fae6b;}
+  .garden .veg{position:absolute;width:clamp(40px,5vw,72px);aspect-ratio:1;}
+  .vine--tl{top:-14px;left:-14px;}
+  .vine--tr{top:-14px;right:-14px;transform:scaleX(-1);}
+  .vine--bl{bottom:-14px;left:-14px;transform:scaleY(-1);}
+  .vine--br{bottom:-14px;right:-14px;transform:scale(-1,-1);}
+  /* game board: subtle, just two corners */
+  .garden--board{opacity:.15;}
+  /* splash: a touch bolder framing */
+  .garden--intro .vine{opacity:.22;}
+  .garden--intro .veg{opacity:.85;}
+  .veg--1{bottom:24px;left:26px;transform:rotate(-12deg);}
+  .veg--2{top:26px;right:30px;transform:rotate(12deg);}
+  .intro__card{z-index:1;}
+  /* veggie marks on the buzzer labels */
+  .tag-veg{width:18px;height:18px;vertical-align:-3px;margin-right:7px;}
 </style>
 </head>
 <body>
+  <!-- garden SVG sprite -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="gx-vine" viewBox="0 0 200 200">
+      <path d="M14,194 C30,150 24,120 56,104 C92,86 84,54 120,40 C150,28 158,16 176,8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+      <g fill="currentColor">
+        <path transform="translate(50,108) rotate(-42)" d="M0,0 C9,-13 28,-13 36,0 C28,13 9,13 0,0 Z"/>
+        <path transform="translate(72,92) rotate(38)"   d="M0,0 C9,-13 28,-13 36,0 C28,13 9,13 0,0 Z"/>
+        <path transform="translate(96,72) rotate(-54)"  d="M0,0 C8,-11 24,-11 31,0 C24,11 8,11 0,0 Z"/>
+        <path transform="translate(118,52) rotate(34)"  d="M0,0 C8,-11 24,-11 31,0 C24,11 8,11 0,0 Z"/>
+        <path transform="translate(140,34) rotate(-58)" d="M0,0 C7,-10 21,-10 27,0 C21,10 7,10 0,0 Z"/>
+        <path transform="translate(32,150) rotate(18)"  d="M0,0 C9,-13 28,-13 36,0 C28,13 9,13 0,0 Z"/>
+      </g>
+    </symbol>
+    <symbol id="gx-tomato" viewBox="0 0 64 64">
+      <circle cx="32" cy="40" r="19" fill="#e8503a"/>
+      <path d="M32 23 C30 15 24 12 18 13 C24 15 27 19 28 24 Z" fill="#3fae6b"/>
+      <path d="M32 23 C34 15 40 12 46 13 C40 15 37 19 36 24 Z" fill="#3fae6b"/>
+      <path d="M32 22 C31 15 31 13 31 11 C33 13 33 17 33 23 Z" fill="#3fae6b"/>
+    </symbol>
+    <symbol id="gx-carrot" viewBox="0 0 64 64">
+      <path d="M30 25 C39 32 42 48 35 58 C33 61 31 61 29 58 C22 48 24 32 30 25 Z" fill="#ef8a2b"/>
+      <path d="M30 25 C28 16 23 12 17 12 C23 14 26 18 27 23 Z" fill="#3fae6b"/>
+      <path d="M31 25 C33 15 38 11 44 12 C38 13 34 18 33 23 Z" fill="#3fae6b"/>
+      <path d="M31 24 C31 14 31 10 31 8 C32 12 33 17 32 23 Z" fill="#3fae6b"/>
+    </symbol>
+  </svg>
+
+  <!-- garden decorations behind the board -->
+  <div class="garden garden--board" aria-hidden="true">
+    <svg class="vine vine--tl"><use href="#gx-vine"></use></svg>
+    <svg class="vine vine--br"><use href="#gx-vine"></use></svg>
+  </div>
+
   <div class="stage" id="stage" data-state="idle" data-buzz="0">
 
     <header class="masthead">
@@ -411,7 +465,7 @@
     <div class="arena">
       <!-- LEFT contestant -->
       <section class="lane lane--left" id="laneLeft" tabindex="0">
-        <div class="lane__tag">Buzzer 1<span class="dot" id="dotLeft"></span></div>
+        <div class="lane__tag"><svg class="tag-veg"><use href="#gx-carrot"></use></svg>Buzzer 1<span class="dot" id="dotLeft"></span></div>
         <div class="lane__name" id="nameLeft">Contestant 1</div>
         <div class="lane__score" id="scoreLeft">0</div>
         <div class="lane__adjust">
@@ -433,7 +487,7 @@
 
       <!-- RIGHT contestant -->
       <section class="lane lane--right" id="laneRight" tabindex="0">
-        <div class="lane__tag">Buzzer 2<span class="dot" id="dotRight"></span></div>
+        <div class="lane__tag"><svg class="tag-veg"><use href="#gx-tomato"></use></svg>Buzzer 2<span class="dot" id="dotRight"></span></div>
         <div class="lane__name" id="nameRight">Contestant 2</div>
         <div class="lane__score" id="scoreRight">0</div>
         <div class="lane__adjust">
@@ -456,6 +510,14 @@
 
   <!-- intro / walk-out splash -->
   <div class="intro open" id="intro" aria-hidden="false">
+    <div class="garden garden--intro" aria-hidden="true">
+      <svg class="vine vine--tl"><use href="#gx-vine"></use></svg>
+      <svg class="vine vine--tr"><use href="#gx-vine"></use></svg>
+      <svg class="vine vine--bl"><use href="#gx-vine"></use></svg>
+      <svg class="vine vine--br"><use href="#gx-vine"></use></svg>
+      <svg class="veg veg--1"><use href="#gx-tomato"></use></svg>
+      <svg class="veg veg--2"><use href="#gx-carrot"></use></svg>
+    </div>
     <div class="intro__card" id="introCard">
       <div class="intro__flash" id="introFlash"></div>
       <div class="intro__ring" id="introRing"></div>
