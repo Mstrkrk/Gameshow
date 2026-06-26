@@ -902,7 +902,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let titleTimer = null, titleShown = false;
   let analyser=null, freqData=null, mediaSrc=null, danceRAF=null;
-  let baseline=0, pulse=0, lastBeat=0, lastFrame=0;
+  let baseline=0, pulse=0, lastBeat=0, lastFrame=0, prevLevel=0, fluxAvg=0;
 
   function startLoop(){ if(!reduceMotion && !danceRAF) danceRAF = requestAnimationFrame(danceFrame); }
   function revealTitle(){
@@ -920,7 +920,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     try{
       const c = audio();
       mediaSrc = c.createMediaElementSource(theme);
-      analyser = c.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.4;
+      analyser = c.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.2;
       freqData = new Uint8Array(analyser.frequencyBinCount);
       mediaSrc.connect(analyser); analyser.connect(c.destination);
     }catch(e){ analyser = null; }     // graceful: falls back to a static title
@@ -928,22 +928,23 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   function danceFrame(now){
     if(!introEl.classList.contains('open')){ danceRAF=null; return; }   // stop once splash is dismissed
     const dt = lastFrame ? Math.min(60, now-lastFrame) : 16; lastFrame = now;
-    let inst=0;
+    let level=0;
     if(analyser){
       analyser.getByteFrequencyData(freqData);
-      let sum=0, n=Math.min(8, freqData.length);          // low/bass bins → the beat
-      for(let i=0;i<n;i++) sum+=freqData[i];
-      inst=(sum/n)/255;
+      let sum=0,c=0; for(let i=1;i<=10;i++){ sum+=freqData[i]||0; c++; }   // bass band (skip DC)
+      level=(sum/c)/255;
     }
-    baseline = baseline*0.95 + inst*0.05;                 // slow-moving average
-    // distinct beat: a sharp jump above the running average (and above an absolute floor), debounced
-    if(inst > 0.16 && inst > baseline*1.35 + 0.05 && (now - lastBeat) > 200){ pulse = 1; lastBeat = now; }
-    pulse = Math.max(0, pulse - dt/165);                  // snap, then fall back to static
+    const flux = Math.max(0, level - prevLevel); prevLevel = level;        // energy rising = an onset
+    fluxAvg = fluxAvg*0.9 + flux*0.1;                                      // adaptive flux average
+    // distinct beat: a flux spike above the adaptive average, with a low absolute floor, debounced
+    if(level > 0.06 && flux > fluxAvg*1.4 + 0.006 && (now - lastBeat) > 150){ pulse = 1; lastBeat = now; }
+    pulse = Math.max(0, pulse - dt/210);                                   // snap, then settle to static
     if(titleShown){
-      introTitle.style.transform = 'scale('+(1 + pulse*0.22).toFixed(3)+') translateY('+(-pulse*12).toFixed(1)+'px)';
+      const drive = Math.max(pulse, level*0.45);        // beats punch; loud sustained parts still move; quiet = static
+      introTitle.style.transform = 'scale('+(1 + drive*0.24).toFixed(3)+') translateY('+(-drive*13).toFixed(1)+'px)';
       introTitle.style.textShadow =
-        '0 0 '+(pulse*130).toFixed(0)+'px rgba(255,206,110,'+(pulse*0.85).toFixed(2)+'), '+
-        '0 0 '+(pulse*70).toFixed(0)+'px rgba(247,167,40,'+(pulse*0.5).toFixed(2)+'), '+
+        '0 0 '+(pulse*140).toFixed(0)+'px rgba(255,206,110,'+(pulse*0.9).toFixed(2)+'), '+
+        '0 0 '+(pulse*80).toFixed(0)+'px rgba(247,167,40,'+(pulse*0.55).toFixed(2)+'), '+
         '0 10px 50px rgba(30,50,90,.28)';
     }
     danceRAF=requestAnimationFrame(danceFrame);
