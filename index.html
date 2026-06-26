@@ -844,13 +844,15 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     document.getElementById('rWinner').textContent = w;
     resultsEl.classList.add('open'); resultsEl.setAttribute('aria-hidden','false');
   }
-  function closeResults(keepScores){
+  function openIntro(){ introEl.classList.add('open'); introEl.setAttribute('aria-hidden','false'); }
+  function closeResults(keepScores, backToIntro){
     resultsEl.classList.remove('open'); resultsEl.setAttribute('aria-hidden','true');
     if(!keepScores){ scores[1]=0; scores[2]=0; }
     blankBoard();
+    if(backToIntro) openIntro();        // back to the "Garden Showdown" title screen
   }
-  document.getElementById('resultsNew').addEventListener('click', ()=>closeResults(false));
-  document.getElementById('resultsClose').addEventListener('click', ()=>closeResults(true));
+  document.getElementById('resultsNew').addEventListener('click', ()=>closeResults(false,false));
+  document.getElementById('resultsClose').addEventListener('click', ()=>closeResults(true,true));
 
   // ---------- intro / walk-out theme + soundboard ----------
   const introEl = document.getElementById('intro');
@@ -961,7 +963,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       if(e.key===' '||e.key==='Enter'||e.key==='n'||e.key==='N'||e.key==='Escape'){ e.preventDefault(); closeIntro(); }
       return;
     }
-    if(state==='results'){ if(e.key==='Escape') closeResults(true); return; }
+    if(state==='results'){ if(e.key==='Escape') closeResults(true,true); return; }
     switch(e.key){
       case ' ': e.preventDefault(); arm(); break;
       case '1': case 'ArrowLeft':  buzz(1); break;
