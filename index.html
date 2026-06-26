@@ -405,16 +405,12 @@
   .garden--board{opacity:.16;}
   /* splash: a touch bolder framing */
   .garden--intro .vine{opacity:.28;}
-  .garden--intro .veg{opacity:.92;transition:transform .06s linear;}
-  .veg--1{bottom:24px;left:26px;transform:rotate(-12deg) scale(calc(1 + var(--energy,0)*.22));}
-  .veg--2{top:26px;right:30px;transform:rotate(12deg) scale(calc(1 + var(--energy,0)*.22));}
+  .garden--intro .veg{opacity:.92;}
+  .veg--1{bottom:24px;left:26px;transform:rotate(-12deg);}
+  .veg--2{top:26px;right:30px;transform:rotate(12deg);}
   .intro__card{z-index:1;}
   /* veggie marks on the buzzer labels */
   .tag-veg{width:22px;height:22px;vertical-align:-4px;margin-right:8px;}
-
-  /* ---- splash "bloom" at 14s: veggies sprout + dance to the music ---- */
-  .intro__bloom{position:absolute;inset:0;z-index:0;pointer-events:none;}
-  .intro__bloom .sprout{position:absolute;width:clamp(98px,12.5vw,222px);aspect-ratio:1;transform:translate(-50%,0) scale(0);opacity:0;transform-origin:center bottom;will-change:transform;}
 </style>
 </head>
 <body>
@@ -529,15 +525,6 @@
       <svg class="vine vine--br"><use href="#gx-vine"></use></svg>
       <svg class="veg veg--1"><use href="#gx-tomato"></use></svg>
       <svg class="veg veg--2"><use href="#gx-carrot"></use></svg>
-    </div>
-    <div class="intro__bloom" id="introBloom" aria-hidden="true">
-      <svg class="sprout" style="--d:0s;left:7%;bottom:6%"><use href="#gx-carrot"></use></svg>
-      <svg class="sprout" style="--d:.08s;left:20%;bottom:3%"><use href="#gx-tomato"></use></svg>
-      <svg class="sprout" style="--d:.16s;left:33%;bottom:8%"><use href="#gx-leaf"></use></svg>
-      <svg class="sprout" style="--d:.24s;left:50%;bottom:2.5%"><use href="#gx-pepper"></use></svg>
-      <svg class="sprout" style="--d:.32s;left:67%;bottom:8%"><use href="#gx-tomato"></use></svg>
-      <svg class="sprout" style="--d:.40s;left:80%;bottom:3%"><use href="#gx-carrot"></use></svg>
-      <svg class="sprout" style="--d:.48s;left:93%;bottom:6%"><use href="#gx-leaf"></use></svg>
     </div>
     <div class="intro__card" id="introCard">
       <div class="intro__flash" id="introFlash"></div>
@@ -912,12 +899,9 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   const introCard = document.getElementById('introCard');
   const introFlash = document.getElementById('introFlash');
   const introRing = document.getElementById('introRing');
-  const introBloom = document.getElementById('introBloom');
-  const sprouts = Array.from(document.querySelectorAll('#introBloom .sprout'));
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let titleTimer = null, titleShown = false;
-  let bloomTimer = null, bloomShown = false;
-  let analyser=null, freqData=null, mediaSrc=null, danceRAF=null, energy=0, bloomStart=0;
+  let analyser=null, freqData=null, mediaSrc=null, danceRAF=null, energy=0;
 
   function startLoop(){ if(!reduceMotion && !danceRAF) danceRAF = requestAnimationFrame(danceFrame); }
   function revealTitle(){
@@ -929,18 +913,17 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     startLoop();                          // title starts pulsing to the music
   }
 
-  // tap the playing theme so graphics can react to the music
+  // tap the playing theme so the title can react to the music
   function setupAnalyser(){
     if(analyser) return;
     try{
       const c = audio();
       mediaSrc = c.createMediaElementSource(theme);
-      analyser = c.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.6;
+      analyser = c.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.55;
       freqData = new Uint8Array(analyser.frequencyBinCount);
       mediaSrc.connect(analyser); analyser.connect(c.destination);
-    }catch(e){ analyser = null; }     // graceful: falls back to static
+    }catch(e){ analyser = null; }     // graceful: falls back to a static title
   }
-  function easeOutBack(p){ const s=1.70158, x=p-1; return 1 + (s+1)*x*x*x + s*x*x; }
   function danceFrame(now){
     if(!introEl.classList.contains('open')){ danceRAF=null; return; }   // stop once splash is dismissed
     let inst=0;
@@ -950,43 +933,23 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       for(let i=0;i<n;i++) sum+=freqData[i];
       inst=(sum/n)/255;
     }
-    energy = inst>energy ? inst : energy*0.80 + inst*0.20;   // snappy attack, quick release
-    introEl.style.setProperty('--energy', energy.toFixed(3));
-    if(titleShown) introTitle.style.transform = 'scale('+(1 + energy*0.13).toFixed(3)+')';
-    if(bloomShown){
-      sprouts.forEach((el,i)=>{
-        const t = now - bloomStart - i*90;          // staggered sprout-in
-        let scale, op;
-        if(t<0){ scale=0; op=0; }
-        else if(t<460){ const p=t/460; scale=Math.max(0, easeOutBack(p)); op=Math.min(1, p*2.2); }
-        else { scale=1; op=1; }
-        const danced = t>=460;
-        const phase=i*0.8, dir=(i%2?1:-1);
-        const hop  = danced ? energy*54 : 0;                                   // jump on the beat
-        const rot  = danced ? Math.sin(now/130 + phase)*energy*18*dir : 0;     // dance tilt — only when music moves
-        const sway = danced ? Math.sin(now/200 + phase)*energy*13*dir : 0;
-        const sc   = scale*(1 + (danced ? energy*0.36 : 0));                   // swell on hits
-        el.style.opacity=op;
-        el.style.transform=`translate(calc(-50% + ${sway.toFixed(1)}px), ${(-hop).toFixed(1)}px) scale(${sc.toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
-      });
+    energy = inst>energy ? inst : energy*0.78 + inst*0.22;   // snappy attack, quick release
+    if(titleShown){
+      const e = energy;
+      introTitle.style.transform = 'scale('+(1 + e*0.24).toFixed(3)+') translateY('+(-e*12).toFixed(1)+'px)';
+      introTitle.style.textShadow =
+        '0 0 '+(16 + e*110).toFixed(0)+'px rgba(255,206,110,'+(0.22 + e*0.7).toFixed(2)+'), '+
+        '0 0 '+(40 + e*150).toFixed(0)+'px rgba(247,167,40,'+(e*0.5).toFixed(2)+'), '+
+        '0 '+(8 + e*20).toFixed(0)+'px '+(30 + e*50).toFixed(0)+'px rgba(30,50,90,.32)';
     }
     danceRAF=requestAnimationFrame(danceFrame);
-  }
-  function revealBloom(){
-    if(bloomShown) return; bloomShown=true; bloomStart=performance.now();
-    if(reduceMotion){ sprouts.forEach(el=>{ el.style.opacity=1; el.style.transform='translate(-50%,0) scale(1)'; }); return; }
-    startLoop();
   }
 
   theme.addEventListener('play',  ()=>{
     setupAnalyser();
-    if(!titleShown){ clearTimeout(titleTimer); titleTimer = setTimeout(revealTitle,  9000); }
-    if(!bloomShown){ clearTimeout(bloomTimer); bloomTimer = setTimeout(revealBloom, 14000); }
+    if(!titleShown){ clearTimeout(titleTimer); titleTimer = setTimeout(revealTitle, 9000); }
   });
-  theme.addEventListener('pause', ()=>{
-    if(!titleShown) clearTimeout(titleTimer);
-    if(!bloomShown) clearTimeout(bloomTimer);
-  });
+  theme.addEventListener('pause', ()=>{ if(!titleShown) clearTimeout(titleTimer); });
 
   // synth rimshot: ba-dum-tss (fallback if no file)
   function playRimshot(){
