@@ -844,7 +844,10 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     document.getElementById('rWinner').textContent = w;
     resultsEl.classList.add('open'); resultsEl.setAttribute('aria-hidden','false');
   }
-  function openIntro(){ introEl.classList.add('open'); introEl.setAttribute('aria-hidden','false'); }
+  function openIntro(){
+    introEl.classList.add('open'); introEl.setAttribute('aria-hidden','false');
+    introTitle.classList.add('show'); titleShown = true;   // make sure the title is on the slide
+  }
   function closeResults(keepScores, backToIntro){
     resultsEl.classList.remove('open'); resultsEl.setAttribute('aria-hidden','true');
     if(!keepScores){ scores[1]=0; scores[2]=0; }
