@@ -352,7 +352,7 @@
     font-size:clamp(52px,10.5vw,168px);margin:0;color:var(--ink);opacity:0;position:relative;
     text-shadow:0 10px 50px rgba(30,50,90,.28);
   }
-  .intro__title.show{opacity:1;animation:slamIn .42s cubic-bezier(.16,.85,.25,1) both;}
+  .intro__title.show{opacity:1;animation:slamIn .42s cubic-bezier(.16,.85,.25,1);}
   .intro__title::after{content:"";display:block;width:clamp(96px,13vw,200px);height:6px;margin:20px auto 0;border-radius:999px;background:linear-gradient(90deg,var(--left),var(--right));transform:scaleX(1);transform-origin:center;}
   .intro__title.show::after{animation:barOut .55s .28s cubic-bezier(.2,.8,.2,1) both;}
   @keyframes slamIn{
@@ -396,7 +396,7 @@
   .garden{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
   .garden--intro{position:absolute;}
   .garden .vine{position:absolute;width:clamp(190px,23vw,420px);aspect-ratio:1;color:#3fae6b;}
-  .garden .veg{position:absolute;width:clamp(86px,11.5vw,190px);aspect-ratio:1;}
+  .garden .veg{position:absolute;width:clamp(100px,13vw,210px);aspect-ratio:1;}
   .vine--tl{top:-14px;left:-14px;}
   .vine--tr{top:-14px;right:-14px;transform:scaleX(-1);}
   .vine--bl{bottom:-14px;left:-14px;transform:scaleY(-1);}
@@ -414,7 +414,7 @@
 
   /* ---- splash "bloom" at 14s: veggies sprout + dance to the music ---- */
   .intro__bloom{position:absolute;inset:0;z-index:0;pointer-events:none;}
-  .intro__bloom .sprout{position:absolute;width:clamp(72px,9.5vw,168px);aspect-ratio:1;transform:translate(-50%,0) scale(0);opacity:0;transform-origin:center bottom;will-change:transform;}
+  .intro__bloom .sprout{position:absolute;width:clamp(98px,12.5vw,222px);aspect-ratio:1;transform:translate(-50%,0) scale(0);opacity:0;transform-origin:center bottom;will-change:transform;}
 </style>
 </head>
 <body>
@@ -919,12 +919,14 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   let bloomTimer = null, bloomShown = false;
   let analyser=null, freqData=null, mediaSrc=null, danceRAF=null, energy=0, bloomStart=0;
 
+  function startLoop(){ if(!reduceMotion && !danceRAF) danceRAF = requestAnimationFrame(danceFrame); }
   function revealTitle(){
     if(titleShown) return; titleShown = true;
     introTitle.classList.add('show');
     introCard.classList.add('shake');
     introFlash.classList.add('show');
     introRing.classList.add('show');
+    startLoop();                          // title starts pulsing to the music
   }
 
   // tap the playing theme so graphics can react to the music
@@ -933,14 +935,14 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     try{
       const c = audio();
       mediaSrc = c.createMediaElementSource(theme);
-      analyser = c.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.65;
+      analyser = c.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.6;
       freqData = new Uint8Array(analyser.frequencyBinCount);
       mediaSrc.connect(analyser); analyser.connect(c.destination);
-    }catch(e){ analyser = null; }     // graceful: falls back to gentle idle motion
+    }catch(e){ analyser = null; }     // graceful: falls back to static
   }
   function easeOutBack(p){ const s=1.70158, x=p-1; return 1 + (s+1)*x*x*x + s*x*x; }
   function danceFrame(now){
-    if(!introEl.classList.contains('open')){ danceRAF=null; return; }   // stop once the splash is dismissed
+    if(!introEl.classList.contains('open')){ danceRAF=null; return; }   // stop once splash is dismissed
     let inst=0;
     if(analyser){
       analyser.getByteFrequencyData(freqData);
@@ -948,27 +950,32 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       for(let i=0;i<n;i++) sum+=freqData[i];
       inst=(sum/n)/255;
     }
-    energy = inst>energy ? inst : energy*0.86 + inst*0.14;   // snappy attack, smooth release
+    energy = inst>energy ? inst : energy*0.80 + inst*0.20;   // snappy attack, quick release
     introEl.style.setProperty('--energy', energy.toFixed(3));
-    sprouts.forEach((el,i)=>{
-      const t = now - bloomStart - i*90;        // staggered sprout-in
-      let scale, op;
-      if(t<0){ scale=0; op=0; }
-      else if(t<460){ const p=t/460; scale=Math.max(0, easeOutBack(p)); op=Math.min(1, p*2.2); }
-      else { scale=1; op=1; }
-      const phase=i*0.8;
-      const idle=Math.sin(now/520 + phase)*5;                       // always alive
-      const beat=(t>=460) ? energy*30*(0.6+0.4*Math.sin(now/110 + phase)) : 0;  // bounce to the music
-      const sc=scale*(1 + ((t>=460) ? energy*0.3 : 0));             // pulse bigger on hits
-      el.style.opacity=op;
-      el.style.transform=`translate(-50%, ${-(idle+beat)}px) scale(${sc})`;
-    });
+    if(titleShown) introTitle.style.transform = 'scale('+(1 + energy*0.13).toFixed(3)+')';
+    if(bloomShown){
+      sprouts.forEach((el,i)=>{
+        const t = now - bloomStart - i*90;          // staggered sprout-in
+        let scale, op;
+        if(t<0){ scale=0; op=0; }
+        else if(t<460){ const p=t/460; scale=Math.max(0, easeOutBack(p)); op=Math.min(1, p*2.2); }
+        else { scale=1; op=1; }
+        const danced = t>=460;
+        const phase=i*0.8, dir=(i%2?1:-1);
+        const hop  = danced ? energy*54 : 0;                                   // jump on the beat
+        const rot  = danced ? Math.sin(now/130 + phase)*energy*18*dir : 0;     // dance tilt — only when music moves
+        const sway = danced ? Math.sin(now/200 + phase)*energy*13*dir : 0;
+        const sc   = scale*(1 + (danced ? energy*0.36 : 0));                   // swell on hits
+        el.style.opacity=op;
+        el.style.transform=`translate(calc(-50% + ${sway.toFixed(1)}px), ${(-hop).toFixed(1)}px) scale(${sc.toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
+      });
+    }
     danceRAF=requestAnimationFrame(danceFrame);
   }
   function revealBloom(){
     if(bloomShown) return; bloomShown=true; bloomStart=performance.now();
     if(reduceMotion){ sprouts.forEach(el=>{ el.style.opacity=1; el.style.transform='translate(-50%,0) scale(1)'; }); return; }
-    if(!danceRAF) danceRAF=requestAnimationFrame(danceFrame);
+    startLoop();
   }
 
   theme.addEventListener('play',  ()=>{
