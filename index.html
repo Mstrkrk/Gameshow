@@ -506,10 +506,10 @@
     </div>
 
     <div class="hints">
-      <span><kbd>N</kbd>Question &rarr; answer &rarr; next</span>
+      <span><kbd>0</kbd>Question &rarr; answer &rarr; next</span>
       <span><kbd>1</kbd><kbd>2</kbd>Buzz in (or &larr; &rarr;)</span>
-      <span><kbd>R</kbd>Correct</span>
-      <span><kbd>W</kbd>Wrong</span>
+      <span><kbd>M</kbd>Correct</span>
+      <span><kbd>N</kbd>Wrong</span>
       <span><kbd>Space</kbd>Re-arm (steal)</span>
       <span><kbd>P</kbd>Previous &nbsp;·&nbsp; <kbd>Esc</kbd>Reset</span>
       <span style="opacity:.8;">Sounds <kbd>Z</kbd>intro <kbd>X</kbd>title <kbd>C</kbd>welcome <kbd>V</kbd>walk-off <kbd>B</kbd>rimshot</span>
@@ -538,6 +538,8 @@
   <audio id="sndWelcome" src="assets/welcome.mp3" preload="auto"></audio>
   <audio id="sndWalkoff" src="assets/walkoff.mp3" preload="auto"></audio>
   <audio id="sndRimshot" src="assets/rimshot.mp3" preload="auto"></audio>
+  <audio id="sndRight" src="assets/right_buzzer.mp3" preload="auto"></audio>
+  <audio id="sndWrong" src="assets/wrong_buzzer.mp3" preload="auto"></audio>
 
   <!-- results splash -->
   <div class="results" id="results" aria-hidden="true">
@@ -611,12 +613,12 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       One item per line: <kbd>Question | Answer | Points</kbd>. The answer and points are
       optional — <kbd>Question | Answer</kbd> uses the default points, and a trailing number is
       always read as points.<br><br>
-      The board starts blank. <kbd>N</kbd> walks the show: reveal the question + arm buzzers →
-      <kbd>N</kbd> shows the answer → <kbd>N</kbd> moves to the next question + arms again. First
-      contestant to hit <kbd>1</kbd> or <kbd>2</kbd> locks the other out; judge with <kbd>R</kbd>
-      (full value) or <kbd>W</kbd> (minus half). If no one buzzes within 10 seconds the buzzers shut
-      off automatically. <kbd>Space</kbd> re-arms the same question (steal), <kbd>P</kbd> steps back.
-      After the last answer, <kbd>N</kbd> shows the final scores.<br><br>
+      The board starts blank. <kbd>0</kbd> walks the show: reveal the question + arm buzzers →
+      <kbd>0</kbd> shows the answer → <kbd>0</kbd> moves to the next question + arms again. First
+      contestant to hit <kbd>1</kbd> or <kbd>2</kbd> locks the other out; judge with <kbd>M</kbd>
+      (correct, full value) or <kbd>N</kbd> (wrong, minus half). If no one buzzes within 10 seconds the
+      buzzers shut off automatically. <kbd>Space</kbd> re-arms the same question (steal), <kbd>P</kbd> steps back.
+      After the last answer, <kbd>0</kbd> shows the final scores.<br><br>
       The <kbd>1</kbd>/<kbd>2</kbd> keys also match standard USB game-show buzzers, so you can add
       physical buttons later with no changes.<br><br>
       <b>Sound cues</b> (bottom row): <kbd>Z</kbd> walk-in theme · <kbd>X</kbd> "Garden Showdown"
@@ -739,8 +741,8 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     if(state!=='buzzed' && state!=='answer') return;
     if(!buzzed) return;                       // nobody to award
     const half = Math.round(value/2);
-    if(correct){ scores[buzzed]+=value; state='right'; sRight(); }
-    else       { scores[buzzed]-=half;  state='wrong'; sWrong(); }
+    if(correct){ scores[buzzed]+=value; state='right'; playRight(); }
+    else       { scores[buzzed]-=half;  state='wrong'; playWrong(); }
     render(); broadcast();
   }
   function resetRound(){ clearTimer(); state='idle'; buzzed=0; render(); broadcast(); }
@@ -867,6 +869,16 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   let rimshotOk = false;
   sndRimshot.addEventListener('canplay', ()=>{ rimshotOk = true; });
   sndRimshot.addEventListener('error',   ()=>{ rimshotOk = false; });
+  const sndRight = document.getElementById('sndRight');
+  const sndWrong = document.getElementById('sndWrong');
+  let rightOk = false, wrongOk = false;
+  sndRight.addEventListener('canplay', ()=>{ rightOk = true; });
+  sndRight.addEventListener('error',   ()=>{ rightOk = false; });
+  sndWrong.addEventListener('canplay', ()=>{ wrongOk = true; });
+  sndWrong.addEventListener('error',   ()=>{ wrongOk = false; });
+  // play the uploaded buzzer if loaded, else the synth fallback
+  function playRight(){ if(rightOk){ try{ sndRight.volume=1; sndRight.currentTime=0; sndRight.play().catch(sRight); return; }catch(e){} } sRight(); }
+  function playWrong(){ if(wrongOk){ try{ sndWrong.volume=1; sndWrong.currentTime=0; sndWrong.play().catch(sWrong); return; }catch(e){} } sWrong(); }
   const introPlay = document.getElementById('introPlay');
   const musicEls = [theme, sndWalkoff];
   const FADE = { musicIn:350, musicOut:1300, sfxIn:0, sfxOut:450 };
@@ -963,7 +975,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     if(typing(e)) return;
     if(handleSoundboard(e.key)) return;        // Z X C V B sound cues, always live
     if(introEl.classList.contains('open')){
-      if(e.key===' '||e.key==='Enter'||e.key==='n'||e.key==='N'||e.key==='Escape'){ e.preventDefault(); closeIntro(); }
+      if(e.key===' '||e.key==='Enter'||e.key==='0'||e.key==='Escape'){ e.preventDefault(); closeIntro(); }
       return;
     }
     if(state==='results'){ if(e.key==='Escape') closeResults(true,true); return; }
@@ -971,14 +983,14 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       case ' ': e.preventDefault(); arm(); break;
       case '1': case 'ArrowLeft':  buzz(1); break;
       case '2': case 'ArrowRight': buzz(2); break;
-      case 'r': case 'R': judge(true); break;
-      case 'w': case 'W': judge(false); break;
+      case 'm': case 'M': judge(true); break;     // right answer
+      case 'n': case 'N': judge(false); break;    // wrong answer
       case 'Escape':
         if(settings.classList.contains('open')) closeSettings();
         else if(lobby.classList.contains('open')) closeLobby();
         else resetRound();
         break;
-      case 'n': case 'N': nextQ(); break;
+      case '0': nextQ(); break;                   // advance: question -> answer -> next
       case 'p': case 'P': prevQ(); break;
       case 't': case 'T': toggleTheme(); break;
       case 's': case 'S': openSettings(); break;
