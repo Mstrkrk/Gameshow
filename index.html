@@ -623,8 +623,8 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       physical buttons later with no changes.<br><br>
       <b>Sound cues</b> (bottom row): <kbd>Z</kbd> walk-in theme · <kbd>X</kbd> "Garden Showdown"
       title · <kbd>C</kbd> welcome contestants · <kbd>V</kbd> walk-off music · <kbd>B</kbd> rimshot.
-      Z and V are music (press again to stop); the rest are one-shots. The phone-QR panel is now
-      <kbd>Q</kbd>. Drop your clips in <kbd>assets/</kbd> as <kbd>title.mp3</kbd>,
+      Z and V are music (press again to stop); the rest are one-shots. The phone-QR panel toggles with
+      <kbd>Q</kbd> or <kbd>.</kbd>. Drop your clips in <kbd>assets/</kbd> as <kbd>title.mp3</kbd>,
       <kbd>welcome.mp3</kbd>, <kbd>walkoff.mp3</kbd>, and <kbd>rimshot.mp3</kbd> (a built-in synth
       rimshot plays until the file is added).
     </p>
@@ -741,8 +741,8 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
     if(state!=='buzzed' && state!=='answer') return;
     if(!buzzed) return;                       // nobody to award
     const half = Math.round(value/2);
-    if(correct){ scores[buzzed]+=value; state='right'; playRight(); }
-    else       { scores[buzzed]-=half;  state='wrong'; playWrong(); }
+    if(correct){ scores[buzzed]+=value; state='right'; }
+    else       { scores[buzzed]-=half;  state='wrong'; }
     render(); broadcast();
   }
   function resetRound(){ clearTimer(); state='idle'; buzzed=0; render(); broadcast(); }
@@ -974,6 +974,8 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
   document.addEventListener('keydown', e=>{
     if(typing(e)) return;
     if(handleSoundboard(e.key)) return;        // Z X C V B sound cues, always live
+    if(e.key==='m'||e.key==='M'){ playRight();  judge(true);  return; }   // right buzzer — always
+    if(e.key==='n'||e.key==='N'){ playWrong(); judge(false); return; }    // wrong buzzer — always
     if(introEl.classList.contains('open')){
       if(e.key===' '||e.key==='Enter'||e.key==='0'||e.key==='Escape'){ e.preventDefault(); closeIntro(); }
       return;
@@ -983,8 +985,6 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       case ' ': e.preventDefault(); arm(); break;
       case '1': case 'ArrowLeft':  buzz(1); break;
       case '2': case 'ArrowRight': buzz(2); break;
-      case 'm': case 'M': judge(true); break;     // right answer
-      case 'n': case 'N': judge(false); break;    // wrong answer
       case 'Escape':
         if(settings.classList.contains('open')) closeSettings();
         else if(lobby.classList.contains('open')) closeLobby();
@@ -994,7 +994,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       case 'p': case 'P': prevQ(); break;
       case 't': case 'T': toggleTheme(); break;
       case 's': case 'S': openSettings(); break;
-      case 'q': case 'Q': toggleLobby(); break;
+      case 'q': case 'Q': case '.': toggleLobby(); break;
     }
   });
 
