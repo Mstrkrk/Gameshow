@@ -980,7 +980,7 @@ What is the iconic container kids use to collect their BGMC offerings? | The Bud
       if(e.key===' '||e.key==='Enter'||e.key==='0'||e.key==='Escape'){ e.preventDefault(); closeIntro(); }
       return;
     }
-    if(state==='results'){ if(e.key==='Escape') closeResults(true,true); return; }
+    if(state==='results'){ if(e.key==='Escape'||e.key==='0') closeResults(true,true); return; }
     switch(e.key){
       case ' ': e.preventDefault(); arm(); break;
       case '1': case 'ArrowLeft':  buzz(1); break;
